@@ -50,6 +50,8 @@
 #include <string>
 #include <vector>
 #include <limits>
+#include <list>
+#include <iterator>
 
 #include <thread>
 #include <mutex>
