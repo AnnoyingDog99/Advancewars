@@ -8,7 +8,7 @@ class Particle_beam
     Particle_beam();
     Particle_beam(vec2 min, vec2 max, Sprite* particle_beam_sprite, int damage);
 
-    void tick(vector<Tank>& tanks);
+    void tick();
     void Draw(Surface* screen);
 
     vec2 min_position;
@@ -19,6 +19,8 @@ class Particle_beam
     int sprite_frame;
 
     int damage;
+
+    bool has_ticked;
 
     Sprite* particle_beam_sprite;
 };

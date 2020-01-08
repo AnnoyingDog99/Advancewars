@@ -3,6 +3,7 @@
 namespace Tmpl8
 {
 //forward declarations
+class Grid;
 class Tank;
 class Rocket;
 class Smoke;
@@ -47,6 +48,7 @@ class Game
   private:
     Surface* screen;
 
+    vector<Grid> grids;
     vector<Tank> btanks;
     vector<Tank> rtanks;
     vector<Rocket> rockets;
