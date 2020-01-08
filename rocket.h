@@ -21,6 +21,8 @@ class Rocket
 
     bool active;
 
+    bool has_ticked;
+
     allignments allignment;
 
     int current_frame;

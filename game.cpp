@@ -46,6 +46,9 @@ const static vec2 rocket_size(25, 24);
 const static float tank_radius = 12.f;
 const static float rocket_radius = 10.f;
 
+const int NUM_OF_GRIDS_X = 10;
+const int NUM_OF_GRIDS_Y = 10;
+
 // -----------------------------------------------------------
 // Initialize the application
 // -----------------------------------------------------------
@@ -84,6 +87,36 @@ void Game::Init() //2N
     particle_beams.push_back(Particle_beam(vec2(80, 80), vec2(100, 50), &particle_beam_sprite, PARTICLE_BEAM_HIT_VALUE));
     particle_beams.push_back(Particle_beam(vec2(1200, 600), vec2(100, 50), &particle_beam_sprite, PARTICLE_BEAM_HIT_VALUE));
     std::cout << "init end: " << perf_timer.elapsed() << "\n";
+
+    float GRID_WIDTH = (SCRWIDTH) / NUM_OF_GRIDS_X;
+    float GRID_HEIGHT = (SCRHEIGHT + 300) / NUM_OF_GRIDS_Y;
+    vector<const Tank*> assigned_tanks;
+    //Spawn grids
+    int id = 1;
+    for (int i = 1; i <= NUM_OF_GRIDS_X + 1; i++)
+    {
+        for (int j = 1; j <= NUM_OF_GRIDS_Y + 1; j++)
+        {
+            grids.push_back(Grid(id, GRID_WIDTH, GRID_HEIGHT, i * GRID_WIDTH, j * GRID_HEIGHT));
+            id++;
+        }
+    }
+    /* Grid Layout example
+         X
+    |/////////|/////////|/////////|/////////|
+    |//     //|//     //|//     //|//     //|
+    |//  1  //|//  4  //|//  7  //|//  10 //| Y
+    |//     //|//     //|//     //|//     //|
+    |/////////|/////////|/////////|/////////|
+    |//     //|//     //|//     //|//     //|
+    |//  2  //|//  5  //|//  8  //|//  11 //|
+    |//     //|//     //|//     //|//     //|
+    |/////////|/////////|/////////|/////////|
+    |//     //|//     //|//     //|//     //|
+    |//  3  //|//  6  //|//  9  //|//  12 //|
+    |//     //|//     //|//     //|//     //|
+    |/////////|/////////|/////////|/////////|
+    */
 }
 
 // -----------------------------------------------------------
@@ -117,7 +150,7 @@ Tank& Game::FindClosestEnemy(Tank& current_tank) //N
         }
         return rtanks[closest_index];
     }
-    else 
+    else
     {
         for (int i = 0; i < btanks.size(); i++)
         {
@@ -144,8 +177,169 @@ Tank& Game::FindClosestEnemy(Tank& current_tank) //N
 // -----------------------------------------------------------
 void Game::Update(float deltaTime) //N^2
 {
+    //Update Grids
+    for (Grid& grid : grids)
+    {
+        // Assigning Tanks to Grid
+        grid.clearTanks();
+        for (Tank& btank : btanks)
+        {
+            btank.has_ticked = false;
+
+            // Overflow decides the amount of distance grids overlap eachother, this way tanks can be in multiple grids at once (making them check multiple grids for collisions with other tanks)
+            float overflow = btank.collision_radius;
+
+            bool overlap = true ? (btank.position.x >= grid.area.x - grid.width - overflow && btank.position.x < grid.area.x + overflow && btank.position.y >= grid.area.y - grid.height - overflow && btank.position.y < grid.area.y + overflow) : false;
+            if (overlap) grid.addBlueTank(&btank);
+        }
+        for (Tank& rtank : rtanks)
+        {
+            rtank.has_ticked = false;
+
+            // Overflow decides the amount of distance grids overlap eachother, this way tanks can be in multiple grids at once (making them check multiple grids for collisions with other tanks)
+            float overflow = rtank.collision_radius;
+
+            bool overlap = true ? (rtank.position.x >= grid.area.x - grid.width - overflow && rtank.position.x < grid.area.x + overflow && rtank.position.y >= grid.area.y - grid.height - overflow && rtank.position.y < grid.area.y + overflow) : false;
+            if (overlap) grid.addRedTank(&rtank);
+        }
+        
+
+        // Assigning Rockets to Grid
+        grid.clearRockets();
+        for (Rocket& rocket : rockets)
+        {
+            rocket.has_ticked = false;
+
+            // Overflow decides the amount of distance grids overlap eachother, this way rockets can be in multiple grids at once (making them check multiple grids for collisions with tanks)
+            float overflow = rocket.collision_radius;
+
+            bool overlap = true ? (rocket.position.x >= grid.area.x - grid.width - overflow && rocket.position.x < grid.area.x + overflow && rocket.position.y >= grid.area.y - grid.height - overflow && rocket.position.y < grid.area.y + overflow) : false;
+            if (overlap) grid.addRocket(&rocket);
+        }
+
+        // Assigning Particle Beams to Grid
+        grid.clearParticle_beams();
+        for (Particle_beam& particle_beam : particle_beams)
+        {
+            particle_beam.has_ticked = false;
+
+            bool overlap = true ? (particle_beam.rectangle.intersectsCircle(grid.area, grid.area.x / 2 + grid.area.y / 2)) : false;
+            if (overlap) grid.addParticle_beam(&particle_beam);
+        }
+    }
+
+    for (Grid& grid : grids)
+    {
+        //Update Tanks
+        for (Tank* tank : grid.getTanks())
+        {
+            if (!tank->active) continue;
+            //Check tank collision and nudge tanks away from each other
+            for (Tank* oTank : grid.getTanks())
+            {
+                if (tank == oTank) continue;
+                vec2 dir = tank->Get_Position() - oTank->Get_Position();
+                float dirSquaredLen = dir.sqrLength();
+
+                float colSquaredLen = (tank->Get_collision_radius() * tank->Get_collision_radius()) + (oTank->Get_collision_radius() * oTank->Get_collision_radius());
+
+                if (dirSquaredLen < colSquaredLen)
+                {
+                    tank->Push(dir.normalized(), 1.f);
+                }
+            }
+
+            //Move tanks according to speed and nudges (see above) also reload
+            if (!tank->has_ticked)
+            {
+                tank->Tick();
+                tank->has_ticked = true;
+            }
+
+            //Shoot at closest target if reloaded
+            if (tank->Rocket_Reloaded())
+            {
+                Tank& target = FindClosestEnemy(*tank);
+
+                rockets.push_back(Rocket(tank->position, (target.Get_Position() - tank->position).normalized() * 3, rocket_radius, tank->allignment, ((tank->allignment == RED) ? &rocket_red : &rocket_blue)));
+
+                tank->Reload_Rocket();
+            }
+        }
+
+        //Update rockets
+        for (Rocket* rocket : grid.getRockets())
+        {
+            if (!rocket->has_ticked)
+            {
+                rocket->Tick();
+                rocket->has_ticked = true;
+            }
+
+            //Check if rocket collides with enemy tank, spawn explosion and if tank is destroyed spawn a smoke plume
+            if (rocket->allignment == BLUE)
+            {
+                for (Tank* tank : grid.getRedTanks())
+                {
+                    if (tank->active && rocket->Intersects(tank->position, tank->collision_radius))
+                    {
+                        explosions.push_back(Explosion(&explosion, tank->position));
+
+                        if (tank->hit(ROCKET_HIT_VALUE))
+                        {
+                            smokes.push_back(Smoke(smoke, tank->position - vec2(0, 48)));
+                        }
+
+                        rocket->active = false;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for (Tank* tank : grid.getBlueTanks())
+                {
+                    if (tank->active && rocket->Intersects(tank->position, tank->collision_radius))
+                    {
+                        explosions.push_back(Explosion(&explosion, tank->position));
+
+                        if (tank->hit(ROCKET_HIT_VALUE))
+                        {
+                            smokes.push_back(Smoke(smoke, tank->position - vec2(0, 48)));
+                        }
+
+                        rocket->active = false;
+                        break;
+                    }
+                }
+            }
+        }
+
+        //Update particle beams
+        for (Particle_beam* particle_beam : grid.getParticle_beams())
+        {
+            if (!particle_beam->has_ticked)
+            {
+                particle_beam->tick();
+                particle_beam->has_ticked = true;
+            }
+
+            //Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
+            for (Tank* tank : grid.getTanks())
+            {
+                if (tank->active && particle_beam->rectangle.intersectsCircle(tank->Get_Position(), tank->Get_collision_radius()))
+                {
+                    if (tank->hit(particle_beam->damage))
+                    {
+                        smokes.push_back(Smoke(smoke, tank->position - vec2(0, 48)));
+                    }
+                }
+            }
+        }
+    }
+
     //Update tanks
-    for (Tank& tank : btanks) //N^2
+    /*for (Tank& tank : btanks) //N^2
     {
         if (tank.active)
         {
@@ -178,14 +372,14 @@ void Game::Update(float deltaTime) //N^2
                 tank.Reload_Rocket();
             }
         }
-    }
+    }*/
 
-        for (Tank &tank : rtanks) //N^2
+    /*for (Tank& tank : rtanks) //N^2
     {
         if (tank.active)
         {
             //Check tank collision and nudge tanks away from each other
-            for (Tank &oTank : rtanks) //N
+            for (Tank& oTank : rtanks) //N
             {
                 if (&tank == &oTank) continue;
 
@@ -213,7 +407,7 @@ void Game::Update(float deltaTime) //N^2
                 tank.Reload_Rocket();
             }
         }
-    }
+    }*/
 
     //Update smoke plumes
     for (Smoke& smoke : smokes) //N
@@ -222,12 +416,12 @@ void Game::Update(float deltaTime) //N^2
     }
 
     //Update rockets
-    for (Rocket& rocket : rockets) //N^2
+    /*for (Rocket& rocket : rockets) //N^2
     {
         rocket.Tick();
 
         //Check if rocket collides with enemy tank, spawn explosion and if tank is destroyed spawn a smoke plume
-        for (Tank &tank : btanks) //N
+        for (Tank& tank : btanks) //N
         {
             if (tank.active && (tank.allignment != rocket.allignment) && rocket.Intersects(tank.position, tank.collision_radius))
             {
@@ -242,7 +436,7 @@ void Game::Update(float deltaTime) //N^2
                 break;
             }
         }
-        for (Tank &tank : rtanks) //N
+        for (Tank& tank : rtanks) //N
         {
             if (tank.active && (tank.allignment != rocket.allignment) && rocket.Intersects(tank.position, tank.collision_radius))
             {
@@ -257,13 +451,16 @@ void Game::Update(float deltaTime) //N^2
                 break;
             }
         }
-    }
+    }*/
 
     //Remove exploded rockets with remove erase idiom
-    rockets.erase(std::remove_if(rockets.begin(), rockets.end(), [](const Rocket& rocket) { return !rocket.active; }), rockets.end());
+    rockets.erase(std::remove_if(rockets.begin(), rockets.end(), [](const Rocket& rocket) {
+                      return !rocket.active || rocket.position.x < 0 || rocket.position.x > SCRWIDTH || rocket.position.y < 0 || rocket.position.y > SCRHEIGHT;
+                  }),
+                  rockets.end());
 
     //Update particle beams
-    for (Particle_beam& particle_beam : particle_beams) //N^2
+    /*for (Particle_beam& particle_beam : particle_beams) //N^2
     {
         particle_beam.tick(btanks);
         particle_beam.tick(rtanks);
@@ -279,7 +476,7 @@ void Game::Update(float deltaTime) //N^2
                 }
             }
         }
-    }
+    }*/
 
     //Update explosion sprites and remove when done with remove erase idiom
     for (Explosion& explosion : explosions) //N
@@ -346,7 +543,7 @@ void Game::Draw() //N^2
     for (int i = 0; i < NUM_TANKS_BLUE; i++) //N
     {
         int health_bar_start_x = i * (HEALTH_BAR_WIDTH + HEALTH_BAR_SPACING) + HEALTH_BARS_OFFSET_X;
-        int health_bar_start_y =  0;
+        int health_bar_start_y = 0;
         int health_bar_end_x = health_bar_start_x + HEALTH_BAR_WIDTH;
         int health_bar_end_y = HEALTH_BAR_HEIGHT;
 
@@ -364,7 +561,6 @@ void Game::Draw() //N^2
         screen->Bar(health_bar_start_x, health_bar_start_y, health_bar_end_x, health_bar_end_y, REDMASK);
         screen->Bar(health_bar_start_x, health_bar_start_y + (int)((double)HEALTH_BAR_HEIGHT * (1 - ((double)sorted_rtanks.at(i)->health / (double)TANK_MAX_HEALTH))), health_bar_end_x, health_bar_end_y, GREENMASK);
     }
-
 }
 
 // -----------------------------------------------------------
@@ -451,7 +647,7 @@ void Game::Tick(float deltaTime)
 
     //Print frame count
     frame_count++;
-    cout << frame_count << "\n";
+    //cout << frame_count << "\n";
     string frame_count_string = "FRAME: " + std::to_string(frame_count);
     frame_count_font->Print(screen, frame_count_string.c_str(), 350, 580);
 }

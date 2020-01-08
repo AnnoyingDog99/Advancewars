@@ -27,6 +27,8 @@ class Tank
     void Deactivate();
     bool hit(int hit_value);
 
+    bool has_ticked;
+
     void Draw(Surface* screen);
 
     int CompareHealth(const Tank& other) const;
