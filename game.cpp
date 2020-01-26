@@ -72,13 +72,12 @@ void Game::Init() //2N
     float spacing = 15.0f;
 
     //Spawn blue tanks
-    for (int i = 0; i < NUM_TANKS_BLUE; i++) //N
+    for (int i = NUM_TANKS_BLUE; i--;) //N
     {
-        //Tank(
         btanks.push_back(Tank(start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing), BLUE, &tank_blue, &smoke, 1200, 600, tank_radius, TANK_MAX_HEALTH, TANK_MAX_SPEED));
     }
     //Spawn red tanks
-    for (int i = 0; i < NUM_TANKS_RED; i++) //N
+    for (int i = NUM_TANKS_RED; i--;) //N
     {
         rtanks.push_back(Tank(start_red_x + ((i % max_rows) * spacing), start_red_y + ((i / max_rows) * spacing), RED, &tank_red, &smoke, 80, 80, tank_radius, TANK_MAX_HEALTH, TANK_MAX_SPEED));
     }
@@ -136,7 +135,7 @@ Tank& Game::FindClosestEnemy(Tank& current_tank) //N
     int closest_index = 0;
     if (current_tank.allignment == BLUE)
     {
-        for (int i = 0; i < rtanks.size(); i++)
+        for (int i = rtanks.size(); i--;)
         {
             if (rtanks[i].active)
             {
@@ -152,7 +151,7 @@ Tank& Game::FindClosestEnemy(Tank& current_tank) //N
     }
     else
     {
-        for (int i = 0; i < btanks.size(); i++)
+        for (int i = btanks.size(); i--;)
         {
             if (btanks[i].active)
             {
@@ -178,11 +177,11 @@ Tank& Game::FindClosestEnemy(Tank& current_tank) //N
 void Game::Update(float deltaTime) //N^2
 {
     //Update Grids
-    for (Grid& grid : grids)
+    for (auto& grid : grids)
     {
         // Assigning Tanks to Grid
         grid.clearTanks();
-        for (Tank& btank : btanks)
+        for (auto& btank : btanks)
         {
             btank.has_ticked = false;
 
@@ -192,7 +191,7 @@ void Game::Update(float deltaTime) //N^2
             bool overlap = true ? (btank.position.x >= grid.area.x - grid.width - overflow && btank.position.x < grid.area.x + overflow && btank.position.y >= grid.area.y - grid.height - overflow && btank.position.y < grid.area.y + overflow) : false;
             if (overlap) grid.addBlueTank(&btank);
         }
-        for (Tank& rtank : rtanks)
+        for (auto& rtank : rtanks)
         {
             rtank.has_ticked = false;
 
@@ -202,11 +201,10 @@ void Game::Update(float deltaTime) //N^2
             bool overlap = true ? (rtank.position.x >= grid.area.x - grid.width - overflow && rtank.position.x < grid.area.x + overflow && rtank.position.y >= grid.area.y - grid.height - overflow && rtank.position.y < grid.area.y + overflow) : false;
             if (overlap) grid.addRedTank(&rtank);
         }
-        
 
         // Assigning Rockets to Grid
         grid.clearRockets();
-        for (Rocket& rocket : rockets)
+        for (auto& rocket : rockets)
         {
             rocket.has_ticked = false;
 
@@ -219,7 +217,7 @@ void Game::Update(float deltaTime) //N^2
 
         // Assigning Particle Beams to Grid
         grid.clearParticle_beams();
-        for (Particle_beam& particle_beam : particle_beams)
+        for (auto& particle_beam : particle_beams)
         {
             particle_beam.has_ticked = false;
 
@@ -228,14 +226,14 @@ void Game::Update(float deltaTime) //N^2
         }
     }
 
-    for (Grid& grid : grids)
+    for (auto& grid : grids)
     {
         //Update Tanks
-        for (Tank* tank : grid.getTanks())
+        for (auto* tank : grid.getTanks())
         {
             if (!tank->active) continue;
             //Check tank collision and nudge tanks away from each other
-            for (Tank* oTank : grid.getTanks())
+            for (auto* oTank : grid.getTanks())
             {
                 if (tank == oTank) continue;
                 vec2 dir = tank->Get_Position() - oTank->Get_Position();
@@ -268,7 +266,7 @@ void Game::Update(float deltaTime) //N^2
         }
 
         //Update rockets
-        for (Rocket* rocket : grid.getRockets())
+        for (auto* rocket : grid.getRockets())
         {
             if (!rocket->has_ticked)
             {
@@ -279,7 +277,7 @@ void Game::Update(float deltaTime) //N^2
             //Check if rocket collides with enemy tank, spawn explosion and if tank is destroyed spawn a smoke plume
             if (rocket->allignment == BLUE)
             {
-                for (Tank* tank : grid.getRedTanks())
+                for (auto* tank : grid.getRedTanks())
                 {
                     if (tank->active && rocket->Intersects(tank->position, tank->collision_radius))
                     {
@@ -297,7 +295,7 @@ void Game::Update(float deltaTime) //N^2
             }
             else
             {
-                for (Tank* tank : grid.getBlueTanks())
+                for (auto* tank : grid.getBlueTanks())
                 {
                     if (tank->active && rocket->Intersects(tank->position, tank->collision_radius))
                     {
@@ -316,7 +314,7 @@ void Game::Update(float deltaTime) //N^2
         }
 
         //Update particle beams
-        for (Particle_beam* particle_beam : grid.getParticle_beams())
+        for (auto* particle_beam : grid.getParticle_beams())
         {
             if (!particle_beam->has_ticked)
             {
@@ -325,7 +323,7 @@ void Game::Update(float deltaTime) //N^2
             }
 
             //Damage all tanks within the damage window of the beam (the window is an axis-aligned bounding box)
-            for (Tank* tank : grid.getTanks())
+            for (auto* tank : grid.getTanks())
             {
                 if (tank->active && particle_beam->rectangle.intersectsCircle(tank->Get_Position(), tank->Get_collision_radius()))
                 {
@@ -410,7 +408,7 @@ void Game::Update(float deltaTime) //N^2
     }*/
 
     //Update smoke plumes
-    for (Smoke& smoke : smokes) //N
+    for (auto& smoke : smokes) //N
     {
         smoke.Tick();
     }
@@ -479,13 +477,16 @@ void Game::Update(float deltaTime) //N^2
     }*/
 
     //Update explosion sprites and remove when done with remove erase idiom
-    for (Explosion& explosion : explosions) //N
+    for (auto& explosion : explosions) //N
     {
         explosion.Tick();
     }
 
     explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](const Explosion& explosion) { return explosion.done(); }), explosions.end());
 }
+
+bool sortByHealth(const Tank& ltank, const Tank& rtank) { return ltank.health < rtank.health; }
+
 void Game::Draw() //N^2
 {
     // clear the graphics window
@@ -495,7 +496,7 @@ void Game::Draw() //N^2
     background.Draw(screen, 0, 0);
 
     //Draw sprites
-    for (int i = 0; i < NUM_TANKS_BLUE; i++) //N
+    for (int i = NUM_TANKS_BLUE; i--;) //N
     {
         btanks[i].Draw(screen);
 
@@ -505,7 +506,7 @@ void Game::Draw() //N^2
             background.GetBuffer()[(int)tPos.x + (int)tPos.y * SCRWIDTH] = SubBlend(background.GetBuffer()[(int)tPos.x + (int)tPos.y * SCRWIDTH], 0x808080);
     }
 
-    for (int i = 0; i < NUM_TANKS_RED; i++) //N
+    for (int i = NUM_TANKS_RED; i--;) //N
     {
         rtanks[i].Draw(screen);
 
@@ -515,32 +516,34 @@ void Game::Draw() //N^2
             background.GetBuffer()[(int)tPos.x + (int)tPos.y * SCRWIDTH] = SubBlend(background.GetBuffer()[(int)tPos.x + (int)tPos.y * SCRWIDTH], 0x808080);
     }
 
-    for (Rocket& rocket : rockets) //N
+    for (auto& rocket : rockets) //N
     {
         rocket.Draw(screen);
     }
 
-    for (Smoke& smoke : smokes) //N
+    for (auto& smoke : smokes) //N
     {
         smoke.Draw(screen);
     }
 
-    for (Particle_beam& particle_beam : particle_beams) //N
+    for (auto& particle_beam : particle_beams) //N
     {
         particle_beam.Draw(screen);
     }
 
-    for (Explosion& explosion : explosions) //N
+    for (auto& explosion : explosions) //N
     {
         explosion.Draw(screen);
     }
 
     //Draw sorted health bars
-    std::vector<const Tank*> sorted_btanks;
-    std::vector<const Tank*> sorted_rtanks;
-    insertion_sort_tanks_health(btanks, sorted_btanks, 0, NUM_TANKS_BLUE);
-    insertion_sort_tanks_health(rtanks, sorted_rtanks, 0, NUM_TANKS_RED);
-    for (int i = 0; i < NUM_TANKS_BLUE; i++) //N
+    //std::vector<const Tank*> sorted_btanks;
+    //std::vector<const Tank*> sorted_rtanks;
+    std::sort(btanks.begin(), btanks.end(), sortByHealth);
+    std::sort(rtanks.begin(), rtanks.end(), sortByHealth);
+    //insertion_sort_tanks_health(btanks, sorted_btanks, 0, NUM_TANKS_BLUE);
+    //insertion_sort_tanks_health(rtanks, sorted_rtanks, 0, NUM_TANKS_RED);
+    for (int i = NUM_TANKS_BLUE; i--;) //N
     {
         int health_bar_start_x = i * (HEALTH_BAR_WIDTH + HEALTH_BAR_SPACING) + HEALTH_BARS_OFFSET_X;
         int health_bar_start_y = 0;
@@ -548,10 +551,10 @@ void Game::Draw() //N^2
         int health_bar_end_y = HEALTH_BAR_HEIGHT;
 
         screen->Bar(health_bar_start_x, health_bar_start_y, health_bar_end_x, health_bar_end_y, REDMASK);
-        screen->Bar(health_bar_start_x, health_bar_start_y + (int)((double)HEALTH_BAR_HEIGHT * (1 - ((double)sorted_btanks.at(i)->health / (double)TANK_MAX_HEALTH))), health_bar_end_x, health_bar_end_y, GREENMASK);
+        screen->Bar(health_bar_start_x, health_bar_start_y + (int)((double)HEALTH_BAR_HEIGHT * (1 - ((double)btanks[i].health / (double)TANK_MAX_HEALTH))), health_bar_end_x, health_bar_end_y, GREENMASK);
     }
 
-    for (int i = 0; i < NUM_TANKS_RED; i++) //N
+    for (int i = NUM_TANKS_RED; i--;) //N
     {
         int health_bar_start_x = i * (HEALTH_BAR_WIDTH + HEALTH_BAR_SPACING) + HEALTH_BARS_OFFSET_X;
         int health_bar_start_y = (SCRHEIGHT - HEALTH_BAR_HEIGHT) - 1;
@@ -559,41 +562,41 @@ void Game::Draw() //N^2
         int health_bar_end_y = SCRHEIGHT - 1;
 
         screen->Bar(health_bar_start_x, health_bar_start_y, health_bar_end_x, health_bar_end_y, REDMASK);
-        screen->Bar(health_bar_start_x, health_bar_start_y + (int)((double)HEALTH_BAR_HEIGHT * (1 - ((double)sorted_rtanks.at(i)->health / (double)TANK_MAX_HEALTH))), health_bar_end_x, health_bar_end_y, GREENMASK);
+        screen->Bar(health_bar_start_x, health_bar_start_y + (int)((double)HEALTH_BAR_HEIGHT * (1 - ((double)rtanks[i].health / (double)TANK_MAX_HEALTH))), health_bar_end_x, health_bar_end_y, GREENMASK);
     }
 }
 
 // -----------------------------------------------------------
 // Sort tanks by health value using insertion sort
 // -----------------------------------------------------------
-void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, UINT16 begin, UINT16 end)
-{
-    const UINT16 NUM_TANKS = end - begin;
-    sorted_tanks.reserve(NUM_TANKS);
-    sorted_tanks.emplace_back(&original.at(begin));
-
-    for (int i = begin + 1; i < (begin + NUM_TANKS); i++) //N^2
-    {
-        const Tank& current_tank = original.at(i);
-
-        for (int s = (int)sorted_tanks.size() - 1; s >= 0; s--) //N
-        {
-            const Tank* current_checking_tank = sorted_tanks.at(s);
-
-            if ((current_checking_tank->CompareHealth(current_tank) <= 0))
-            {
-                sorted_tanks.insert(1 + sorted_tanks.begin() + s, &current_tank);
-                break;
-            }
-
-            if (s == 0)
-            {
-                sorted_tanks.insert(sorted_tanks.begin(), &current_tank);
-                break;
-            }
-        }
-    }
-}
+//void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, UINT16 begin, UINT16 end)
+//{
+//    const UINT16 NUM_TANKS = end - begin;
+//    sorted_tanks.reserve(NUM_TANKS);
+//    sorted_tanks.emplace_back(&original.at(begin));
+//
+//    for (int i = begin + 1; i < (begin + NUM_TANKS); i++) //N^2
+//    {
+//        const Tank& current_tank = original.at(i);
+//
+//        for (int s = (int)sorted_tanks.size() - 1; s >= 0; s--) //N
+//        {
+//            const Tank* current_checking_tank = sorted_tanks.at(s);
+//
+//            if ((current_checking_tank->CompareHealth(current_tank) <= 0))
+//            {
+//                sorted_tanks.insert(1 + sorted_tanks.begin() + s, &current_tank);
+//                break;
+//            }
+//
+//            if (s == 0)
+//            {
+//                sorted_tanks.insert(sorted_tanks.begin(), &current_tank);
+//                break;
+//            }
+//        }
+//    }
+//}
 
 // -----------------------------------------------------------
 // When we reach MAX_FRAMES print the duration and speedup multiplier
