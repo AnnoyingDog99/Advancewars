@@ -16,11 +16,27 @@ class Game
     void Init();
     void Shutdown();
     void Update(float deltaTime);
-    void Draw();
+
+    void UpdateGrids();
+    void UpdateTanks();
+    void UpdateRockets();
+    void UpdateParticleBeams();
+
+    void DrawAll();
+    void DrawParticleBeams();
+    void DrawScreen();
+    void DrawBlueTanks();
+    void DrawRedTanks();
+    void DrawRockets();
+    void DrawExplosions();
+    void DrawSmokes();
+
+    void SortTanks();
+    void DrawHealthBar();
     void Tick(float deltaTime);
-    //void insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, UINT16 begin, UINT16 end);
-    //int Partition(std::vector<Tank>& tanks, UINT16 left, UINT16 right);
-    //void QuickSort(std::vector<Tank>& tanks, UINT16 left, UINT16 right);
+    void insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, UINT16 begin, UINT16 end);
+    int Partition(std::vector<Tank>& tanks, UINT16 left, UINT16 right);
+    void QuickSort(std::vector<Tank>& tanks, UINT16 left, UINT16 right);
     void MeasurePerformance();
 
     Tank& FindClosestEnemy(Tank& current_tank);

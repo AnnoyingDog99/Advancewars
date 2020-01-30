@@ -17,6 +17,25 @@ uint Grid::getID()
     return this->id;
 }
 
+float Grid::getWidth()
+{
+    return this->width;
+}
+
+float Grid::getHeight()
+{
+    return this->height;
+}
+
+vec2 Grid::getArea()
+{
+    return this->area;
+}
+
+/*
+* Fills the vector all_tanks on first call (when the vector is empty) before returning
+* Only returns all_tanks on all other calls
+*/
 vector<Tank*> Grid::getTanks()
 {
     if (this->all_tanks.size() > 0) return all_tanks;
@@ -45,9 +64,12 @@ vector<Particle_beam*> Grid::getParticle_beams()
     return this->particle_beams;
 }
 
+/*
+* Sorts and adds tank to it's corresponding vector
+*/
 void Grid::addTank(Tank* tank)
 {
-    if (tank->allignment == BLUE)
+    if (tank->Get_Allignment() == BLUE)
         this->blue_tanks.push_back(std::move(tank));
     else
         this->red_tanks.push_back(std::move(tank));
@@ -85,7 +107,7 @@ void Grid::clearTanks()
 
 void Grid::clearRockets()
 {
-    this->rockets.clear();
+    this->rockets.shrink_to_fit();
     this->rockets.clear();
 }
 
