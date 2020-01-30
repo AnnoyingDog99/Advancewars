@@ -394,12 +394,11 @@ void Game::UpdateParticleBeams()
 // -----------------------------------------------------------
 void Game::Update(float deltaTime) //N^2
 {
-    UpdateGrids();    // Assigns Tanks, Rockets and Particle Beams to Grid
+    UpdateGrids(); // Assigns Tanks, Rockets and Particle Beams to Grid
+
     add_tanks.wait(); // Assigned in UpdateGrid()
     UpdateTanks();
-    sort_tanks = pool.enqueue([&] {
-        SortTanks();
-    });
+
     draw_screen.wait(); // Assigned in Tick()
     draw_blue_tanks = pool.enqueue([&] {
         DrawBlueTanks();
@@ -407,17 +406,24 @@ void Game::Update(float deltaTime) //N^2
     draw_red_tanks = pool.enqueue([&] {
         DrawRedTanks();
     });
+
     add_rockets.wait(); // Assigned in UpdateGrid()
-    UpdateRockets();
+    future<void> update_rockets = pool.enqueue([&] {
+        UpdateRockets();
+    });
+
+    add_particleBeams.wait(); // Assigned in UpdateGrid()
+    UpdateParticleBeams();
+
+    update_rockets.wait();
+    sort_tanks = pool.enqueue([&] {
+        SortTanks();
+    });
+
     draw_blue_tanks.wait();
     draw_red_tanks.wait();
     draw_rockets = pool.enqueue([&] {
         DrawRockets();
-    });
-    add_particleBeams.wait(); // Assigned in UpdateGrid()
-
-    future<void> update_particleBeams = pool.enqueue([&] {
-        UpdateParticleBeams();
     });
 
     //Update explosion sprites and remove when done with remove erase idiom
@@ -438,8 +444,6 @@ void Game::Update(float deltaTime) //N^2
     {
         smoke.Tick();
     }
-
-    update_particleBeams.wait();
 }
 
 bool sortByHealth(const Tank& ltank, const Tank& rtank) { return ltank.Get_Health() < rtank.Get_Health(); }
@@ -618,16 +622,10 @@ void Game::Tick(float deltaTime)
     if (!lock_update)
     {
         Update(deltaTime);
-
-        draw_blue_tanks.wait(); // Assigned in Update()
-        draw_red_tanks.wait(); // Assigned in Update()
-        DrawParticleBeams();
-        draw_explosions = pool.enqueue(move([&] {
-            DrawExplosions();
-        }));
-        DrawSmokes();
         draw_rockets.wait(); // Assigned in Update()
-        draw_explosions.wait();
+        DrawParticleBeams();
+        DrawExplosions();
+        DrawSmokes();
         sort_tanks.wait(); // Assigned in Update()
         DrawHealthBar();
     }
