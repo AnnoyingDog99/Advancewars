@@ -8,10 +8,10 @@ class Grid
 {
   public:
     Grid(uint, float, float, float, float);
-    float width;
-    float height;
     uint getID();
-    vec2 area;
+    float getWidth();
+    float getHeight();
+    vec2 getArea();
     vector<Tank*> getTanks();
     vector<Tank*> getBlueTanks();
     vector<Tank*> getRedTanks();
@@ -27,7 +27,10 @@ class Grid
     void clearParticle_beams();
 
   private:
-    uint id;
+    const uint id;
+    const float width;
+    const float height;
+    const vec2 area;
     vector<Tank*> all_tanks;
     vector<Tank*> red_tanks;
     vector<Tank*> blue_tanks;
