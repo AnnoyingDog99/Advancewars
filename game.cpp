@@ -204,32 +204,6 @@ void Game::UpdateGrids()
         grid.clearRockets();
         grid.clearParticle_beams();
     }
-    add_tanks = pool.enqueue([&] {
-        for (auto& grid : grids)
-        {
-            // Assigning Tanks to Grid
-            for (Tank& btank : btanks)
-            {
-                btank.Set_Ticked(false);
-
-                // Overflow decides the amount of distance grids overlap eachother, this way tanks can be in multiple grids at once (making them check multiple grids for collisions with other tanks)
-                float overflow = btank.Get_collision_radius();
-
-                bool overlap = true ? (btank.Get_Position().x >= grid.getArea().x - grid.getWidth() - overflow && btank.Get_Position().x < grid.getArea().x + overflow && btank.Get_Position().y >= grid.getArea().y - grid.getWidth() - overflow && btank.Get_Position().y < grid.getArea().y + overflow) : false;
-                if (overlap) grid.addBlueTank(&btank);
-            }
-            for (Tank& rtank : rtanks)
-            {
-                rtank.Set_Ticked(false);
-
-                // Overflow decides the amount of distance grids overlap eachother, this way tanks can be in multiple grids at once (making them check multiple grids for collisions with other tanks)
-                float overflow = rtank.Get_collision_radius();
-
-                bool overlap = true ? (rtank.Get_Position().x >= grid.getArea().x - grid.getWidth() - overflow && rtank.Get_Position().x < grid.getArea().x + overflow && rtank.Get_Position().y >= grid.getArea().y - grid.getWidth() - overflow && rtank.Get_Position().y < grid.getArea().y + overflow) : false;
-                if (overlap) grid.addRedTank(&rtank);
-            }
-        }
-    });
     add_rockets = pool.enqueue([&] {
         for (auto& grid : grids)
         {
@@ -259,6 +233,31 @@ void Game::UpdateGrids()
             }
         }
     });
+
+    for (auto& grid : grids)
+    {
+        // Assigning Tanks to Grid
+        for (Tank& btank : btanks)
+        {
+            btank.Set_Ticked(false);
+
+            // Overflow decides the amount of distance grids overlap eachother, this way tanks can be in multiple grids at once (making them check multiple grids for collisions with other tanks)
+            float overflow = btank.Get_collision_radius();
+
+            bool overlap = true ? (btank.Get_Position().x >= grid.getArea().x - grid.getWidth() - overflow && btank.Get_Position().x < grid.getArea().x + overflow && btank.Get_Position().y >= grid.getArea().y - grid.getWidth() - overflow && btank.Get_Position().y < grid.getArea().y + overflow) : false;
+            if (overlap) grid.addBlueTank(&btank);
+        }
+        for (Tank& rtank : rtanks)
+        {
+            rtank.Set_Ticked(false);
+
+            // Overflow decides the amount of distance grids overlap eachother, this way tanks can be in multiple grids at once (making them check multiple grids for collisions with other tanks)
+            float overflow = rtank.Get_collision_radius();
+
+            bool overlap = true ? (rtank.Get_Position().x >= grid.getArea().x - grid.getWidth() - overflow && rtank.Get_Position().x < grid.getArea().x + overflow && rtank.Get_Position().y >= grid.getArea().y - grid.getWidth() - overflow && rtank.Get_Position().y < grid.getArea().y + overflow) : false;
+            if (overlap) grid.addRedTank(&rtank);
+        }
+    }
 }
 
 void Game::UpdateTanks()
@@ -396,7 +395,6 @@ void Game::Update(float deltaTime) //N^2
 {
     UpdateGrids(); // Assigns Tanks, Rockets and Particle Beams to Grid
 
-    add_tanks.wait(); // Assigned in UpdateGrid()
     UpdateTanks();
 
     draw_screen.wait(); // Assigned in Tick()
